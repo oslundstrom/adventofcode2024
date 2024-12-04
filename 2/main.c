@@ -13,15 +13,21 @@ int main() {
   size_t size = 100;
 
   nlines = 0;
-  while (len = getline(&line, &size, stdin) > 0) {
-    if (nlines >= MAXLINES || (p = malloc(len)) == NULL) {
+  while ((len = getline(&line, &size, stdin)) > 0) {
+    printf("Line: %s\n", line);
+    printf("Len: %d\n", len);
+    printf("Size: %d\n", size);
+    if (nlines >= MAXLINES || (p = malloc(size)) == NULL) {
       printf("error: input too big!\n");
       return 1;
     } else {
-      // printf("Saving line %s\n", line);
       strcpy(p, line);
       printf("Last char before null: %d\n", p[len-1]);
       printf("Null: %d\n", p[len]);
+      if (p[len-1] == 10) {
+        p[len-1] = '\0';
+      }
+      printf("Fixed line: %sEND\n", p);
       reportlines[nlines++] = p;
     }
   }
@@ -31,19 +37,20 @@ int main() {
 
   int report[MAXLINES][100];
   int n_unsafe = 0;
+  int n_saved = 0;
   // Print the array
   for (int n = 0; n < nlines; n++) {
     bool eol = false;
     int level = 0, accindex = 0, read = 0;
     char accumulate[50];
-    fprintf(stderr, "New line: %s", reportlines[n]);
-    fprintf(stderr, "Accumulating: ");
+    printf("\nNew line (no %d): %s\n", n, reportlines[n]);
+    printf("Accumulating: ");
     while (true) {
-      sscanf(reportlines[n], "%d\n%n", &report[n][level], &read);
-      if (read == 0) {
-        fprintf(stderr, "\nStart analysis\n");
+      int result = sscanf(reportlines[n], "%d\n%n", &report[n][level], &read);
+      if (result == EOF || result < 1) {
+        printf("\nStart analysis");
         int n_partial_safe = 0;
-        int full_safe = 0;
+        bool full_safe = true;
         for (int i = 0; i <= level; i++) {
           /* This chooses what level to skip*/
           /* Include one more skip, to make sure
@@ -52,11 +59,11 @@ int main() {
           printf("\nSkip %d: ", i);
           bool increasing = false;
           bool decreasing = false;
-          bool inner_safe = false;
+          bool inner_safe = true;
           int old_j = -1;
           for (int j = 0; j < level; j++) {
             if (j == i)
-              break;
+              continue;
             printf("%d, ", report[n][j]);
             if (old_j != -1) { /* Else this is the first loop*/
               int diff = report[n][old_j] - report[n][j];
@@ -69,24 +76,30 @@ int main() {
                 if (i == level) {
                   /* This means we are testing the full test case*/
                   full_safe = false;
+                  printf("U");
                 } else {
                   inner_safe = false;
+                  printf("u");
                 }
-                printf("U");
                 break;
               } 
-              old_j = j;
             }
+            old_j = j;
+          }
+          if (i != level && inner_safe) {
+            printf(" is");
             n_partial_safe += 1;
           }
-          if (full_safe) {
-            continue;
-          } else if (! full_safe && n_partial_safe > 0) {
-            continue;
-          } else {
-            n_unsafe++;
-          }
-
+        }
+        if (full_safe) {
+          printf("\nS (%d partials)", n_partial_safe);
+          n_partial_safe += 1;
+        } else if (! full_safe && n_partial_safe > 0) {
+          printf("\ndS (%d partials)", n_partial_safe);
+          n_saved++;
+        } else {
+          printf("\nU (%d partials)", n_partial_safe);
+          n_unsafe++;
         }
         break;
       }
@@ -100,6 +113,7 @@ int main() {
     printf("\n");
   }
   printf("Unsafe reports: %d\n", n_unsafe);
+  printf("Saved reports: %d\n", n_saved);
   printf("Safe reports: %d\n", nlines - n_unsafe);
 
   return 0;
