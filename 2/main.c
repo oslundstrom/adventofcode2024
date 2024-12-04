@@ -20,6 +20,8 @@ int main() {
     } else {
       // printf("Saving line %s\n", line);
       strcpy(p, line);
+      printf("Last char before null: %d\n", p[len-1]);
+      printf("Null: %d\n", p[len]);
       reportlines[nlines++] = p;
     }
   }
@@ -31,48 +33,68 @@ int main() {
   int n_unsafe = 0;
   // Print the array
   for (int n = 0; n < nlines; n++) {
-    bool increasing = false;
-    bool decreasing = false;
     bool eol = false;
-    int level = 0, accindex = 0;
+    int level = 0, accindex = 0, read = 0;
     char accumulate[50];
-    fprintf(stderr, "%s", reportlines[n]);
-    for (char character = *reportlines[n]; eol == false; character = *++reportlines[n]) {
-      // fprintf(stderr, "%c", character);
-      switch (character) {
-        case '\0':
-          eol = true;
-          fprintf(stderr, "(EOL with accindex %d)", accindex);
-          if (accindex == 1) { /* Nothing accumulated, continue*/
-            fprintf(stderr, "(EOL with accindex %d, prev is %c)", accindex, accumulate[0]);
+    fprintf(stderr, "New line: %s", reportlines[n]);
+    fprintf(stderr, "Accumulating: ");
+    while (true) {
+      sscanf(reportlines[n], "%d\n%n", &report[n][level], &read);
+      if (read == 0) {
+        fprintf(stderr, "\nStart analysis\n");
+        int n_partial_safe = 0;
+        int full_safe = 0;
+        for (int i = 0; i <= level; i++) {
+          /* This chooses what level to skip*/
+          /* Include one more skip, to make sure
+          the full report is tested as well*/
+
+          printf("\nSkip %d: ", i);
+          bool increasing = false;
+          bool decreasing = false;
+          bool inner_safe = false;
+          int old_j = -1;
+          for (int j = 0; j < level; j++) {
+            if (j == i)
+              break;
+            printf("%d, ", report[n][j]);
+            if (old_j != -1) { /* Else this is the first loop*/
+              int diff = report[n][old_j] - report[n][j];
+              if (diff > 0) {
+                decreasing = true;
+              } else if (diff < 0) {
+                increasing = true;
+              }
+              if ((increasing && decreasing) || diff == 0 || abs(diff) > 3) {
+                if (i == level) {
+                  /* This means we are testing the full test case*/
+                  full_safe = false;
+                } else {
+                  inner_safe = false;
+                }
+                printf("U");
+                break;
+              } 
+              old_j = j;
+            }
+            n_partial_safe += 1;
           }
-        case ' ': case '\n': case '!':
-          if (accindex == 0) { /* Nothing accumulated, continue*/
+          if (full_safe) {
             continue;
+          } else if (! full_safe && n_partial_safe > 0) {
+            continue;
+          } else {
+            n_unsafe++;
           }
-          sscanf(accumulate, "%d", &report[n][level]);
-          accindex = 0;
-          break;
-        default:
-          // printf("%c", character);
-          accumulate[accindex++] = character;
-          accumulate[accindex] = '\0';
-          continue;
+
+        }
+        break;
       }
+      reportlines[n] += read; /* Advance the pointer */
+      if (report[n][level] == 0)
+        continue; /* Need to break here, the zeros do not appear in data
+        and there appear ghost bangs that become zeros*/
       printf("%d, ", report[n][level]);
-      if (level != 0) {
-        int diff = report[n][level-1] - report[n][level];
-        if (diff > 0) {
-          decreasing = true;
-        } else if (diff < 0) {
-          increasing = true;
-        }
-        if ((increasing && decreasing) || diff == 0 || abs(diff) > 3) {
-          n_unsafe += 1;
-          printf("U");
-          break;
-        }
-      }
       level++;
     }
     printf("\n");
