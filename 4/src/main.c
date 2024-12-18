@@ -1,18 +1,16 @@
-#include "main.h"
-#include <string.h>
-
-bool check_string(char* string, int origin, int offset)
-{
-        char * ans = "XMAS";
-        int len = strlen(ans);
-        for (int i=0; i<len; i++) {
-                if (string[origin + i * offset] != ans[i])
-                        return false;
-        }
-        return true;
-}
+#include <stdio.h>
+#include "lib.h"
 
 int main(int argc, char *argv[])
 {
+        char * line;
+        char * text;
+        size_t len, size, read;
+        while ((len = getline(&line, &size, stdin)) != 0) {
+                printf("%ld\n", len);
+                line += len;
+                read += len;
+        }
+
         return 0;
 }
