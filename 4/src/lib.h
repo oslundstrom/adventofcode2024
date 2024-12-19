@@ -3,6 +3,6 @@
 
 #include <stdbool.h>
 
-bool check_string(char* string, int origin, int offset);
+bool check_string(char* string, int origin, int offset, int linelen);
 
 #endif /* MAIN_H */
